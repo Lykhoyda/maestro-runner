@@ -251,8 +251,18 @@ func expandDollarVar(text, name, value string) string {
 // outlive a single runScript call still goes through the global `output`
 // bag, exactly as documented.
 func (se *ScriptEngine) RunScript(script string, env map[string]string) error {
-	// Expand variables in script
-	script = se.ExpandVariables(script)
+	return se.runScript(script, env, true)
+}
+
+// runScript runs a script with its env. expandBody expands ${...} and $VAR in the script text
+// first, which suits inline script text. A script file is plain JavaScript and runs as written,
+// as in Maestro: expanding it first replaced the file's own template literals (`${localVar}`)
+// ahead of the script, against variables that did not exist yet.
+func (se *ScriptEngine) runScript(script string, env map[string]string, expandBody bool) error {
+	if expandBody {
+		// Expand variables in script
+		script = se.ExpandVariables(script)
+	}
 
 	// Apply env variables for the duration of THIS script only, expanded so
 	// values like "mockoon-cli start --port ${output.port}" resolve before the
@@ -422,7 +432,8 @@ func (se *ScriptEngine) ExecuteRunScript(step *flow.RunScriptStep) *core.Command
 	script := step.ScriptPath()
 
 	// Check if it's a file path (ends with .js)
-	if strings.HasSuffix(script, ".js") {
+	isFile := strings.HasSuffix(script, ".js")
+	if isFile {
 		filePath := se.ResolvePath(script)
 		content, err := os.ReadFile(filePath)
 		if err != nil {
@@ -435,7 +446,7 @@ func (se *ScriptEngine) ExecuteRunScript(step *flow.RunScriptStep) *core.Command
 		script = string(content)
 	}
 
-	if err := se.RunScript(script, step.Env); err != nil {
+	if err := se.runScript(script, step.Env, !isFile); err != nil {
 		return &core.CommandResult{
 			Success: false,
 			Error:   err,
