@@ -1280,12 +1280,6 @@ func looksLikeRegex(text string) bool {
 	return false
 }
 
-// escapeUIAutomatorString escapes only the double quotes for UiAutomator string.
-// Used when the text is already a regex pattern.
-func escapeUIAutomatorString(s string) string {
-	return strings.ReplaceAll(s, `"`, `\"`)
-}
-
 // buildStateFilters returns UiSelector chain for state filters.
 // e.g., ".enabled(true).checked(false)"
 func buildStateFilters(sel flow.Selector) string {
